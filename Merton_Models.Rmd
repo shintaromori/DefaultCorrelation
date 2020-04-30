@@ -1,7 +1,7 @@
 ---
 title: 'Parameter Esimation and WAIC,WBIC of Merton models'
 author: "S.Mori"
-date: "2020年2月10日"
+date: "2020/2/10"
 output: html_document
 ---
 
@@ -81,7 +81,7 @@ legend("topright",horiz=FALSE,legend=c(titles[1],titles[6],titles[11],titles[3],
 
 
 
-- 平均デフォルト率
+- DEfault Rates
 
 $$
 \lambda_{avg}=\sum_{t=1}^{T}k_t/\sum_{t}n_t
@@ -101,98 +101,7 @@ lambda_avg[i]<-round(sum(data[[i]][,2])/sum(data[[i]][,1]),3)
 
 
 
-## デフォルト相関のモデル化:Merton Model
 
-- $\lambda$：デフォルト確率
-
-- $\rho$:アセット相関
-
-$$
-S\sim \mbox{N}(0,1^2)
-$$
-
-
-- $\rho$:アセット相関:$\theta(x):$Step function
-
-
-$$
-D_i(t)=\theta(\Phi^{-1}(\lambda)-(\sqrt{\rho}S+\sqrt{1-\rho}\xi_i)),\xi_i,S\sim \mbox{N}(0,1^2),i=1,\cdots,N
-$$
-
-
-- 条件つきデフォルト確率$p(S)$
-
-$$
-p(S)=P(D_i=1|S)=\Phi\left(\frac{\Phi^{-1}(\lambda)-\sqrt{\rho}S}{\sqrt{1-\rho}}\right)
-$$
-
-
-- 同時デフォルト確率
-
-$$
-P[\mbox{Borrower i and j default}]=P(D_i=1 \cap D_j=1)=\Phi_2(\Phi^{-1}(\lambda),\Phi^{-1}(\lambda),\rho)
->\lambda^2=P[D_t]P[D_s] \,\,\, (14)
-$$
-
-- デフォルト相関$\rho_{D}$
-
-$$
-\rho_{D}\equiv \frac{P(D_i=1 \cap D_j=1)-\lambda^2}{\lambda(1-\lambda)}
-$$
-
-
-
-- アセット相関VSデフォルト相関
-
-
-```{r echo=FALSE}
-f01<-function(rho) rho2rho_D(rho,0.5)
-f001<-function(rho) rho2rho_D(rho,0.01)
-f01v<-Vectorize(f01)
-f001v<-Vectorize(f001)
-curve(f01v,xlim=c(0,0.9999),xlab=expression(rho),ylab=expression(rho[D]),n=200,lwd=2)
-curve(f001v,add=TRUE,col=2,n=200,lwd=2)
-legend("topleft",legend=c("lambda=0.5","lambda=0.01"),col=1:2,lwd=2)
-```
-
-
-
-
-- 時間相関
-
-$$
-S[1:T]\sim N_{T}(\vec{0},\Sigma)
-$$
-
-$$
-\Sigma_{ij}=\mbox{Cor}(S_i,S_j)
-$$
-
-
-
-- $\theta$:時間相関のパラメータ
-
-$$
-\mbox{Cor}(S_t,S_{t'})=\theta^{|t-t'|}
-$$
-
-
-$$
-\mbox{Cor}(S_t,S_{t'})=(1+|t-t'|)^{-\theta}
-$$
-
-- RW モデル
-
-$$
-S_1\sim \mbox{N}(0,1^2),S_t=\theta S_{t-1}+\sqrt{1-\theta^2} \epsilon_t,t\ge 2,\epsilon_t\sim \mbox{N}(0,1^2)
-$$
-
-
-$$
-\Sigma_{t,t'}=\mbox{Cor}(S_t,S_{t'})={\theta}^{|t-t'|}
-$$
-
-- Merton Model:$\theta=0$
 
 
 
@@ -263,6 +172,9 @@ save(lambda_Merton,rho_Merton,logL_Merton,AIC_Merton,SE_lambda_Merton,SE_rho_Mer
 
 -  Bayesian Estimation
 
+- Merton
+
+- WAIC
 
 ```{stan output.var="Merton_WAIC"}
 data{
@@ -298,6 +210,10 @@ generated quantities {
 }
 ```
 
+
+- WBIC
+
+
 ```{stan output.var="Merton_WBIC"}
 data{
   int T;
@@ -332,6 +248,7 @@ generated quantities {
 }
 ```
 
+- EXP-WAIC
 
 ```{stan output.var="EXP_WAIC"}
 data{
@@ -378,6 +295,8 @@ generated quantities {
 ```
 
 
+- EXP-WBIC
+
 ```{stan output.var="EXP_WBIC"}
 data{
   int T;
@@ -422,7 +341,7 @@ generated quantities {
 }
 ```
 
-
+- RW-WAIC
 
 ```{stan output.var="RW_WAIC"}
 data{
@@ -466,7 +385,7 @@ generated quantities {
 ```
 
 
-
+- RW-WBIC
 
 ```{stan output.var="RW_WBIC"}
 data{
@@ -510,7 +429,7 @@ generated quantities {
 ```
 
 
-
+- POW-WAIC
 
 ```{stan output.var="POW_WAIC"}
 data{
@@ -557,7 +476,7 @@ generated quantities {
 ```
 
 
-
+- POW-WBIC
 
 
 ```{stan output.var="POW_WBIC"}
@@ -611,7 +530,7 @@ generated quantities {
 
 
 
-## ベイズサンプリング
+## Sampling
 
 
 ```{r eval=FALSE,echo=FALSE}
