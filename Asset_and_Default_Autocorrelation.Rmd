@@ -1,0 +1,990 @@
+---
+title: "Default autocorrelation for Merton Model with memory"
+author: "S.Mori"
+date: "2020年4月21日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(mvtnorm)
+source("function.R")
+options(width=120)
+```
+
+
+
+
+## デフォルト相関のモデル化:Merton Model with time-correlation
+
+- $p$：デフォルト確率
+
+- $\rho_{A}$:アセット相関
+
+- $\epsilon_{it}$ iid.
+
+$$
+S_{t},\epsilon_{it} \sim \mbox{N}(0,1^2)
+$$
+
+- 内部状態変数$U_{it} \sim \mbox{N}(0,1)$
+
+$$
+U_{it}\equiv \sqrt{\rho_A}S_t+\sqrt{1-\rho_A}\xi_{it} \sim \mbox{N}(0,1^2)
+$$
+
+
+- $\vec{u}=(U_{1t},\cdots,U_{nt})^{T}$の同時分布：1-Factor Normal Model
+
+$$
+\vec{u_t}=(U_{1t},\cdots,U_{nt})^{T}\sim \mbox{N}_{n}(\vec{0},\Sigma_{A})
+$$
+
+
+
+$$
+\Sigma_{A} = \left(\begin{array}{ccccc}
+1 & \rho_{A} & \rho_{A} &\cdots  & \rho_{A} \\   
+\rho_{A}  & 1 & \rho_{A} & \cdots & \rho_{A} \\
+\rho_{A} & \rho_{A} & 1  & \cdots & \rho_{A} \\
+\vdots & \vdots & \vdots & \ddots  & \vdots \\
+\rho_{A} & \rho_{A} & \rho_{A} & \cdots  & 1
+ \end{array}\right)
+$$
+
+
+
+- デフォルト変数$X_{it}\in \{0,1\}$
+
+
+$$
+X_{it}=1_{U_{it}\le \Phi^{-1}(p)}
+$$
+
+
+- 条件つきデフォルト確率$G(S_t)$
+
+$$
+G(S_t)=P(X_{it}=1|S_t)=\Phi\left(\frac{\Phi^{-1}(p)-\sqrt{\rho_{A}}S_t}{\sqrt{1-\rho_{A}}}\right)
+$$
+
+
+
+- 同時デフォルト確率
+
+$$
+P(X_{it}=1 \cap X_{jt}=1)=\Phi_2(\Phi^{-1}(p),\Phi^{-1}(p),\Sigma_{A})
+\ge p^2,\Sigma_{2,A}=\left(\begin{array}{cc} 1 & \rho_{A}\\ \rho_{A} &  1 \end{array}\right)
+$$
+
+- 同時刻デフォルト相関$\rho_{D}$
+
+$$
+\rho_{D}(\rho_{A})\equiv \frac{P(X_{it}=1 \cap X_{jt}=1)-p^2}{p(1-p)}
+$$
+
+
+
+$$
+f(\rho_{A})\equiv \rho_{D}(\rho_{A})=\frac{\Phi_2(\Phi^{-1}(p),\Phi^{-1}(p),\Sigma_{2,A})-p^2}{p(1-p)}
+$$
+
+- 共分散
+
+$$
+\mbox{Cov}(X_{it},X_{jt})=\rho_{D}(\rho_{A})p(1-p)=\Phi_2(\Phi^{-1}(p),\Phi^{-1}(p),\Sigma_{A})-p^2=p(1-p)f(\rho_{A})
+$$
+
+
+- 時間相関
+
+$$
+\mbox{Cor}(S_t,S_t')=d_{|t-t'|},d_{0}=1,t=1,\cdots,T
+$$
+
+$$
+\vec{s}=(S_1,\cdots,S_T)\sim \mbox{N}_{T}(\vec{0},\Sigma_{tmp})
+$$
+
+
+$$
+\Sigma_{tmp} = \left(\begin{array}{ccccc}
+1 & d_{1} & d_{2} &\cdots  & d_{T-1} \\   
+d_{1}  & 1 & d_{1} & \cdots & \rho_{T-2} \\
+d_{2} & d_{1} & 1  & \cdots & d_{T-3} \\
+\vdots & \vdots & \vdots & \ddots  & \vdots \\
+d_{T-1} & d_{T-2} & d_{T-3} & \cdots  & 1
+ \end{array}\right)
+$$
+
+$$
+\mbox{Cor}(U_{it},U_{jt'})=\rho_{A}d_{|t-t'|}
+$$
+
+$$
+\mbox{Cor}(X_{it},X_{jt'})=f(\rho_{A}d_{|t-t'|}),\mbox{Cov}(X_{it},X_{jt'})=p(1-p)f(\rho_{A}d_{|t-t'|})
+$$
+
+
+$$
+Z(T)\equiv \frac{1}{nT}\sum_{t=1}^{T}\sum_{i=1}^{n}X_{i,t}
+$$
+
+$$
+\mbox{E}(Z(T))=p
+$$
+
+$$
+\mbox{V}(Z(T))=\frac{1}{T^2n^2}(Tnp(1-p)+Tn(n-1)p(1-p)f(\rho_{A})+2n^2p(1-p)\sum_{i=1}^{T-1}f(\rho_{A}d_{i})(T-i))
+$$
+
+$$
+\stackrel{T\to \infty}{\sim}  \frac{2p(1-p)}{T^2}\sum_{i=1}^{T-1}f(\rho_{A}d_{i})(T-i)
+$$
+
+
+$$
+C(t)\equiv \frac{\mbox{Cov}(X_{11},X_{1(t+1)})}{p(1-p)}=f(\rho_{A}d_{t})
+$$
+
+$$
+f(x)\stackrel{x\to 0}{\simeq} \frac{A x}{p(1-p)}
+$$
+
+
+$$
+p(1-p)f(\rho)=\Phi_2\left(\Phi^{-1}(p),\Phi^{-1}(p),\left(\begin{array}{cc} 1 & \rho \\ \rho & 1 \end{array}\right)\right)-p^2
+$$
+
+$$
+h\left(x,y|\left(\begin{array}{cc} 1 & \rho \\ \rho & 1 \end{array}\right)\right)=
+\frac{1}{2\pi\sqrt{1-\rho^2}}\exp\left(-\frac{1}{2(1-\rho^2)}(x^2+y^2-2\rho xy)\right)
+$$
+
+$$
+\Phi_2\left(\Phi^{-1}(p),\Phi^{-1}(p),\left(\begin{array}{cc} 1 & \rho \\ \rho & 1 \end{array}\right)\right)
+=\int_{-\infty}^{\Phi^{-1}(p)}dx \int_{-\infty}^{\Phi^{-1}(p)}dy 
+h\left(x,y|\left(\begin{array}{cc} 1 & \rho \\ \rho & 1 \end{array}\right)\right)
+$$
+
+$$
+p(1-p)f(\rho)\stackrel{\rho\to 0}\simeq \frac{\rho}{2\pi}\int_{-\infty}^{\Phi^{-1}(p)}dx \int_{-\infty}^{\Phi^{-1}(p)}dy 
+  \exp(-\frac{1}{2}(x^2+y^2))xy
+$$
+
+$$
+A=\frac{1}{2\pi}\int_{-\infty}^{\Phi^{-1}(p)}dx \int_{-\infty}^{\Phi^{-1}(p)}dy \exp(-\frac{1}{2}(x^2+y^2))xy
+=\left(\int_{-\infty}^{\Phi^{-1}(p)}\phi(x)x dx\right)^2
+$$
+
+```{r}
+rho2rho_D<-function(rho,p){
+  Sigma<-matrix(c(1,rho,rho,1),2,2)
+  q<-qnorm(p)
+  rho_D<-(pmvnorm(upper=c(q,q),mean=c(0,0),sigma=Sigma)[1]-p^2)/(p*(1-p))
+  return(rho_D)  
+}
+
+A<-function(p){
+  f<-function(x) dnorm(x)*x
+  q<-qnorm(p)
+  ans<-integrate(f,-Inf,q)$value
+  return(ans*ans)  
+}
+
+p<-0.5
+a05<-A(p)/(p*(1-p))
+p<-0.1
+a01<-A(p)/(p*(1-p))
+p<-0.01
+a001<-A(p)/(p*(1-p))
+
+
+f05<-function(rho) rho2rho_D(rho,0.5)
+f01<-function(rho) rho2rho_D(rho,0.1)
+f001<-function(rho) rho2rho_D(rho,0.01)
+f_05<-Vectorize(f05)
+f_01<-Vectorize(f01)
+f_001<-Vectorize(f001)
+
+par(mar = c(5.5, 6.0, 4.1, 2))
+curve(f_05,xlim=c(0,0.9999),xlab=expression(paste(rho[A])),ylab=expression(rho[D]),n=200,lwd=2,cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+abline(a=0,b=a05,col=8,lwd=1,lty=1)
+curve(f_01,add=TRUE,col=1,lty=2,n=200,lwd=2)
+abline(a=0,b=a01,col=8,lwd=1,lty=1)
+curve(f_001,add=TRUE,col=1,lty=3,n=200,lwd=2)
+abline(a=0,b=a001,col=8,lwd=1,lty=1)
+legend("topleft",legend=c("p=50%","p=10%","p=1%"),col=1,lty=c(1,2,3),lwd=2)
+
+
+pdf("rho_A_vs_rho_D.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+curve(f_05,xlim=c(0,0.9999),xlab=expression(paste(rho[A])),ylab=expression(rho[D]),n=200,lwd=2,cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+abline(a=0,b=a05,col=8,lwd=1,lty=1)
+curve(f_01,add=TRUE,col=1,lty=2,n=200,lwd=2)
+abline(a=0,b=a01,col=8,lwd=1,lty=1)
+curve(f_001,add=TRUE,col=1,lty=3,n=200,lwd=2)
+abline(a=0,b=a001,col=8,lwd=1,lty=1)
+legend("topleft",legend=c("p=50%","p=10%","p=1%"),col=1,lty=c(1,2,3),lwd=2)
+dev.off()
+
+
+par(mar = c(5.5, 6.0, 4.1, 2))
+ps<-seq(0,0.5,by=0.01)
+plot(ps,sapply(ps,A),type="l",xlab="p",ylab="A",lwd=2,cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+
+pdf("p_vs_A.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(ps,sapply(ps,A),type="l",xlab="p",ylab="A",lwd=2,cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+  dev.off()
+```
+
+
+```{r echo=FALSE}
+par(mar = c(5.5, 6.0, 4.1, 2),ps=9,mex=0.7)
+plot(c(0.8,0.8),c(0,f001(0.8)),type="l",lty=1,lwd=2,col=8,xlim=c(-0.1,1.1),ylim=c(-0.1,1),ann=FALSE,axes=FALSE)
+curve(f_001,xlim=c(0,0.9999),n=200,lwd=3,xlab="",ylab="",add=TRUE)
+points(c(0.8,0.8),c(0,f001(0.8)),type="l",lty=1,lwd=2,col=8)
+points(c(0.5,0.5),c(0,f001(0.5)),type="l",lty=1,lwd=2,col=8)
+points(c(0.0,0.8),c(f001(0.8),f001(0.8)),type="l",lty=1,lwd=2,col=8)
+points(c(0.0,0.5),c(f001(0.5),f001(0.5)),type="l",lty=1,lwd=2,col=8)
+points(c(0.0,0.8),c(0.0,f001(0.8)),type="l",lty=1,lwd=1,col=8)
+points(c(0.5,0.5),c(0.0,0.625*f001(0.8)),type="l",lty=3,lwd=2,col=1)
+points(c(0.0,0.5),c(0.625*f001(0.8),0.625*f001(0.8)),type="l",lty=3,lwd=2,col=1)
+text(0.8,-0.06,expression(paste(rho[A])),cex=2)
+text(0.5,-0.06,expression(paste("x",rho[A])),cex=2)
+text(-0.04,f001(0.8),expression(paste(rho[D])),cex=2)
+text(-0.06,0.625*f001(0.8),expression(paste("x",rho[D])),cex=2)
+text(-0.06,f001(0.5),expression(paste("f(x",rho[D],")")),cex=2)
+abline(a=0,b=1,col=8,lwd=1,lty=1)
+abline(a=0,b=0,col=1,lwd=2,lty=1)
+abline(v=0,col=1,lwd=2,lty=1)
+
+pdf("rho3.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2),ps=9,mex=0.7)
+plot(c(0.8,0.8),c(0,f001(0.8)),type="l",lty=1,lwd=2,col=8,xlim=c(-0.1,1.1),ylim=c(-0.1,1),ann=FALSE,axes=FALSE)
+curve(f_001,xlim=c(0,0.9999),n=200,lwd=3,xlab="",ylab="",add=TRUE)
+points(c(0.8,0.8),c(0,f001(0.8)),type="l",lty=1,lwd=2,col=8)
+points(c(0.5,0.5),c(0,f001(0.5)),type="l",lty=1,lwd=2,col=8)
+points(c(0.0,0.8),c(f001(0.8),f001(0.8)),type="l",lty=1,lwd=2,col=8)
+points(c(0.0,0.5),c(f001(0.5),f001(0.5)),type="l",lty=1,lwd=2,col=8)
+points(c(0.0,0.8),c(0.0,f001(0.8)),type="l",lty=1,lwd=1,col=8)
+points(c(0.5,0.5),c(0.0,0.625*f001(0.8)),type="l",lty=3,lwd=2,col=1)
+points(c(0.0,0.5),c(0.625*f001(0.8),0.625*f001(0.8)),type="l",lty=3,lwd=2,col=1)
+text(0.8,-0.06,expression(paste(rho[A])),cex=2)
+text(0.5,-0.06,expression(paste("x",rho[A])),cex=2)
+text(-0.04,f001(0.8),expression(paste(rho[D])),cex=2)
+text(-0.06,0.625*f001(0.8),expression(paste("x",rho[D])),cex=2)
+text(-0.06,f001(0.5),expression(paste("f(x",rho[D],")")),cex=2)
+abline(a=0,b=1,col=8,lwd=1,lty=1)
+abline(a=0,b=0,col=1,lwd=2,lty=1)
+abline(v=0,col=1,lwd=2,lty=1)
+dev.off()
+```
+
+
+
+
+- $\rho_{A}(t),\rho_{D}(t)$の計算：べき減衰の場合
+
+```{r echo=FALSE}
+T<-10000
+pd<-0.5
+rho<-0.5
+rho_A_t_01<-c();rho_A_t_05<-c();rho_A_t_10<-c();rho_A_t_15<-c();rho_A_t_20<-c()
+rho_D_t_01<-c();rho_D_t_05<-c();rho_D_t_10<-c();rho_D_t_15<-c();rho_D_t_20<-c()
+for(t in 1:T){
+  rho_A_t_01[t]<-(t+1)**(-1*0.1)
+  rho_A_t_05[t]<-(t+1)**(-1*0.5)
+  rho_A_t_10[t]<-(t+1)**(-1*1.0)
+  rho_A_t_15[t]<-(t+1)**(-1*1.5)
+  rho_A_t_20[t]<-(t+1)**(-1*2.0)
+  rho_D_t_01[t]<-rho2rho_D(rho*rho_A_t_01[t],pd)
+  rho_D_t_05[t]<-rho2rho_D(rho*rho_A_t_05[t],pd)
+  rho_D_t_10[t]<-rho2rho_D(rho*rho_A_t_10[t],pd)
+  rho_D_t_15[t]<-rho2rho_D(rho*rho_A_t_15[t],pd)
+  rho_D_t_20[t]<-rho2rho_D(rho*rho_A_t_20[t],pd)
+}  
+```
+
+```{r echo=FALSE}
+t1<-expression(paste(gamma,"=0.1"));t2<-expression(paste(gamma,"=0.5"));t3<-expression(paste(gamma,"=1.0"))
+t4<-expression(paste(gamma,"=1.5"));t5<-expression(paste(gamma,"=2.0"))
+plot(1:T,rho_A_t_01,log="xy",type="l",ylim=c(0.00001,1),col=1,lwd=2,ylab=expression(paste("Cor(S(1),S(t+1))=",rho[A],"(t)")),xlab="t")
+points(1:T,rho_A_t_05,type="l",col=2,lwd=2)
+points(1:T,rho_A_t_10,type="l",col=3,lwd=2)
+points(1:T,rho_A_t_15,type="l",col=4,lwd=2)
+points(1:T,rho_A_t_20,type="l",col=5,lwd=2)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5),col=1:5,lty=1,lwd=2)
+```
+
+
+- $\lambda=0.5$
+
+
+```{r echo=FALSE}
+t1<-expression(paste(gamma,"=0.1"));t2<-expression(paste(gamma,"=0.5"));t3<-expression(paste(gamma,"=1.0"))
+t4<-expression(paste(gamma,"=1.5"));t5<-expression(paste(gamma,"=2.0"))
+t_ylab<-expression(paste("Cor(",X[i1],",",X[j(t+1)],")"))
+t_main<-expression(paste(lambda,"=0.5"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_01,log="xy",type="l",ylim=c(0.000001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_05,type="l",col="gray",lwd=2)
+points(1:T,rho_D_t_10,type="l",col=1,lwd=2,lty=2)
+points(1:T,rho_D_t_15,type="l",col="gray",lwd=2,lty=2)
+points(1:T,rho_D_t_20,type="l",col=1,lwd=2,lty=3)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5),col=c("black","gray","black","gray","black"),lty=c(1,1,2,2,3),lwd=2)
+
+pdf("Cor_X_pd_0.5_rho_0.5_POW.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_01,log="xy",type="l",ylim=c(0.000001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_05,type="l",col="gray",lwd=2)
+points(1:T,rho_D_t_10,type="l",col=1,lwd=2,lty=2)
+points(1:T,rho_D_t_15,type="l",col="gray",lwd=2,lty=2)
+points(1:T,rho_D_t_20,type="l",col=1,lwd=2,lty=3)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5),col=c("black","gray","black","gray","black"),lty=c(1,1,2,2,3),lwd=2)
+dev.off()
+```
+
+
+
+- $\lambda=0.1$
+
+```{r echo=FALSE}
+T<-10000
+pd<-0.1
+rho_D_t_01<-c();rho_D_t_05<-c();rho_D_t_10<-c();rho_D_t_15<-c();rho_D_t_20<-c()
+for(t in 1:T){
+  rho_D_t_01[t]<-rho2rho_D(rho*rho_A_t_01[t],pd)
+  rho_D_t_05[t]<-rho2rho_D(rho*rho_A_t_05[t],pd)
+  rho_D_t_10[t]<-rho2rho_D(rho*rho_A_t_10[t],pd)
+  rho_D_t_15[t]<-rho2rho_D(rho*rho_A_t_15[t],pd)
+  rho_D_t_20[t]<-rho2rho_D(rho*rho_A_t_20[t],pd)
+}  
+```
+
+
+
+```{r echo=FALSE}
+t1<-expression(paste(gamma,"=0.1"));t2<-expression(paste(gamma,"=0.5"));t3<-expression(paste(gamma,"=1.0"))
+t4<-expression(paste(gamma,"=1.5"));t5<-expression(paste(gamma,"=2.0"))
+t_ylab<-expression(paste("Cor(",X[i1],",",X[j(t+1)],")"))
+#t_ylab<-expression(paste("Cor(X(1),X(t+1))"))
+t_main<-expression(paste(lambda,"=0.1"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_01,log="xy",type="l",ylim=c(0.000001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_05,type="l",col="gray",lwd=2)
+points(1:T,rho_D_t_10,type="l",col=1,lwd=2,lty=2)
+points(1:T,rho_D_t_15,type="l",col="gray",lwd=2,lty=2)
+points(1:T,rho_D_t_20,type="l",col=1,lwd=2,lty=3)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5),col=c("black","gray","black","gray","black"),lty=c(1,1,2,2,3),lwd=2)
+
+pdf("Cor_X_pd_0.1_rho_0.5_POW.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_01,log="xy",type="l",ylim=c(0.000001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_05,type="l",col="gray",lwd=2)
+points(1:T,rho_D_t_10,type="l",col=1,lwd=2,lty=2)
+points(1:T,rho_D_t_15,type="l",col="gray",lwd=2,lty=2)
+points(1:T,rho_D_t_20,type="l",col=1,lwd=2,lty=3)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5),col=c("black","gray","black","gray","black"),lty=c(1,1,2,2,3),lwd=2)
+dev.off()
+```
+
+
+- $\lambda=0.01$
+
+```{r echo=FALSE}
+T<-10000
+pd<-0.01
+rho_D_t_01<-c();rho_D_t_05<-c();rho_D_t_10<-c();rho_D_t_15<-c();rho_D_t_20<-c()
+for(t in 1:T){
+  rho_D_t_01[t]<-rho2rho_D(rho*rho_A_t_01[t],pd)
+  rho_D_t_05[t]<-rho2rho_D(rho*rho_A_t_05[t],pd)
+  rho_D_t_10[t]<-rho2rho_D(rho*rho_A_t_10[t],pd)
+  rho_D_t_15[t]<-rho2rho_D(rho*rho_A_t_15[t],pd)
+  rho_D_t_20[t]<-rho2rho_D(rho*rho_A_t_20[t],pd)
+}  
+```
+
+```{r echo=FALSE}
+t1<-expression(paste(gamma,"=0.1"));t2<-expression(paste(gamma,"=0.5"));t3<-expression(paste(gamma,"=1.0"))
+t4<-expression(paste(gamma,"=1.5"));t5<-expression(paste(gamma,"=2.0"))
+t_ylab<-expression(paste("Cor(",X[i1],",",X[j(t+1)],")"))
+#t_ylab<-expression(paste("Cor(X(1),X(t+1))"))
+t_main<-expression(paste(lambda,"=0.01"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_01,log="xy",type="l",ylim=c(0.000001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_05,type="l",col="gray",lwd=2)
+points(1:T,rho_D_t_10,type="l",col=1,lwd=2,lty=2)
+points(1:T,rho_D_t_15,type="l",col="gray",lwd=2,lty=2)
+points(1:T,rho_D_t_20,type="l",col=1,lwd=2,lty=3)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5),col=c("black","gray","black","gray","black"),lty=c(1,1,2,2,3),lwd=2)
+
+pdf("Cor_X_pd_0.01_rho_0.5_POW.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_01,log="xy",type="l",ylim=c(0.000001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_05,type="l",col="gray",lwd=2)
+points(1:T,rho_D_t_10,type="l",col=1,lwd=2,lty=2)
+points(1:T,rho_D_t_15,type="l",col="gray",lwd=2,lty=2)
+points(1:T,rho_D_t_20,type="l",col=1,lwd=2,lty=3)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5),col=c("black","gray","black","gray","black"),lty=c(1,1,2,2,3),lwd=2)
+dev.off()
+```
+
+
+- $\rho_{A}(t),\rho_{D}(t)$の計算：指数関数減衰の場合
+
+```{r echo=FALSE}
+T<-10000
+pd<-0.5
+
+rho_A_t_09999<-c();rho_A_t_0999<-c();rho_A_t_099<-c();rho_A_t_09<-c();rho_A_t_08<-c()
+rho_D_t_09999<-c();rho_D_t_0999<-c();rho_D_t_099<-c();rho_D_t_09<-c();rho_D_t_08<-c()
+
+for(t in 1:T){
+  rho_A_t_09999[t]<-0.9999**t
+  rho_A_t_0999[t]<-0.999**t
+  rho_A_t_099[t]<-0.99**t
+  rho_A_t_09[t]<-0.9**t
+  rho_A_t_08[t]<-0.8**t
+  
+  rho_D_t_09999[t]<-rho2rho_D(rho*rho_A_t_09999[t],pd)
+  rho_D_t_0999[t]<-rho2rho_D(rho*rho_A_t_0999[t],pd)
+  rho_D_t_099[t]<-rho2rho_D(rho*rho_A_t_099[t],pd)
+  rho_D_t_09[t]<-rho2rho_D(rho*rho_A_t_09[t],pd)
+  rho_D_t_08[t]<-rho2rho_D(rho*rho_A_t_08[t],pd)
+}  
+```
+
+```{r echo=FALSE}
+t1<-expression(paste(theta,"=0.9999"));t2<-expression(paste(theta,"=0.999"));t3<-expression(paste(theta,"=0.99"))
+t4<-expression(paste(theta,"=0.9"));t5<-expression(paste(theta,"=0.8"))
+plot(1:T,rho_A_t_09999,log="xy",type="l",ylim=c(0.001,1),col=1,lwd=2,ylab=expression(paste("Cor(S(1),S(t+1))=",rho[A],"(t)")),xlab="t")
+points(1:T,rho_A_t_0999,type="l",col=2,lwd=2)
+points(1:T,rho_A_t_099,type="l",col=3,lwd=2)
+points(1:T,rho_A_t_09,type="l",col=4,lwd=2)
+points(1:T,rho_A_t_08,type="l",col=5,lwd=2)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5),col=1:5,lty=1,lwd=2)
+```
+
+
+
+- $\lambda=0.5$
+
+
+```{r echo=FALSE}
+t1<-expression(paste(theta,"=0.999"));t2<-expression(paste(theta,"=0.99"));t3<-expression(paste(theta,"=0.9"));t4<-expression(paste(theta,"=0.8"))
+t_ylab<-expression(paste("Cor(",X[i1],",",X[j(t+1)],")"))
+#t_ylab<-expression(paste("Cor(X(1),X(t+1))"))
+t_main<-expression(paste(lambda,"=0.5"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_0999,log="xy",type="l",ylim=c(0.0001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_099,type="l",col=8,lty=1,lwd=2)
+points(1:T,rho_D_t_09,type="l",col=1,lty=2,lwd=2)
+points(1:T,rho_D_t_08,type="l",col=8,lty=2,lwd=2)
+legend("bottomleft",legend=c(t1,t2,t3,t4),col=c(1,8,1,8),lty=c(1,1,2,2),lwd=2)
+
+pdf("Cor_X_pd_0.5_rho_0.5_EXP.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_0999,log="xy",type="l",ylim=c(0.0001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_099,type="l",col=8,lty=1,lwd=2)
+points(1:T,rho_D_t_09,type="l",col=1,lty=2,lwd=2)
+points(1:T,rho_D_t_08,type="l",col=8,lty=2,lwd=2)
+legend("bottomleft",legend=c(t1,t2,t3,t4),col=c(1,8,1,8),lty=c(1,1,2,2),lwd=2)
+dev.off()
+```
+
+- $\lambda=0.1$
+
+```{r echo=FALSE}
+T<-10000
+pd<-0.1
+
+rho_D_t_09999<-c();rho_D_t_0999<-c();rho_D_t_099<-c();rho_D_t_09<-c();rho_D_t_08<-c()
+
+for(t in 1:T){
+  rho_D_t_0999[t]<-rho2rho_D(rho*rho_A_t_0999[t],pd)
+  rho_D_t_099[t]<-rho2rho_D(rho*rho_A_t_099[t],pd)
+  rho_D_t_09[t]<-rho2rho_D(rho*rho_A_t_09[t],pd)
+  rho_D_t_08[t]<-rho2rho_D(rho*rho_A_t_08[t],pd)
+}  
+```
+
+
+
+```{r echo=FALSE}
+t1<-expression(paste(theta,"=0.999"));t2<-expression(paste(theta,"=0.99"));t3<-expression(paste(theta,"=0.9"));t4<-expression(paste(theta,"=0.8"))
+t_ylab<-expression(paste("Cor(",X[i1],",",X[j(t+1)],")"))
+#t_ylab<-expression(paste("Cor(X(1),X(t+1))"))
+t_main<-expression(paste(lambda,"=0.1"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_0999,log="xy",type="l",ylim=c(0.0001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_099,type="l",col=8,lty=1,lwd=2)
+points(1:T,rho_D_t_09,type="l",col=1,lty=2,lwd=2)
+points(1:T,rho_D_t_08,type="l",col=8,lty=2,lwd=2)
+legend("bottomleft",legend=c(t1,t2,t3,t4),col=c(1,8,1,8),lty=c(1,1,2,2),lwd=2)
+
+pdf("Cor_X_pd_0.1_rho_0.5_EXP.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_0999,log="xy",type="l",ylim=c(0.0001,1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_099,type="l",col=8,lty=1,lwd=2)
+points(1:T,rho_D_t_09,type="l",col=1,lty=2,lwd=2)
+points(1:T,rho_D_t_08,type="l",col=8,lty=2,lwd=2)
+legend("bottomleft",legend=c(t1,t2,t3,t4),col=c(1,8,1,8),lty=c(1,1,2,2),lwd=2)
+dev.off()
+```
+
+
+
+- $\lambda=0.01$
+
+```{r echo=FALSE}
+T<-10000
+pd<-0.01
+
+rho_D_t_09999<-c();rho_D_t_0999<-c();rho_D_t_099<-c();rho_D_t_09<-c();rho_D_t_08<-c()
+
+for(t in 1:T){
+  rho_D_t_0999[t]<-rho2rho_D(rho*rho_A_t_0999[t],pd)
+  rho_D_t_099[t]<-rho2rho_D(rho*rho_A_t_099[t],pd)
+  rho_D_t_09[t]<-rho2rho_D(rho*rho_A_t_09[t],pd)
+  rho_D_t_08[t]<-rho2rho_D(rho*rho_A_t_08[t],pd)
+}  
+```
+
+
+
+```{r echo=FALSE}
+t1<-expression(paste(theta,"=0.999"));t2<-expression(paste(theta,"=0.99"));t3<-expression(paste(theta,"=0.9"));t4<-expression(paste(theta,"=0.8"))
+t_ylab<-expression(paste("Cor(",X[i1],",",X[j(t+1)],")"))
+#t_ylab<-expression(paste("Cor(X(1),X(t+1))"))
+t_main<-expression(paste(lambda,"=0.01"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_0999,log="xy",type="l",ylim=c(0.000001,1.0),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_099,type="l",col=8,lty=1,lwd=2)
+points(1:T,rho_D_t_09,type="l",col=1,lty=2,lwd=2)
+points(1:T,rho_D_t_08,type="l",col=8,lty=2,lwd=2)
+legend("bottomleft",legend=c(t1,t2,t3,t4),col=c(1,8,1,8),lty=c(1,1,2,2),lwd=2)
+
+pdf("Cor_X_pd_0.01_rho_0.5_EXP.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(1:T,rho_D_t_0999,log="xy",type="l",ylim=c(0.000001,1.0),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(1:T,rho_D_t_099,type="l",col=8,lty=1,lwd=2)
+points(1:T,rho_D_t_09,type="l",col=1,lty=2,lwd=2)
+points(1:T,rho_D_t_08,type="l",col=8,lty=2,lwd=2)
+legend("bottomleft",legend=c(t1,t2,t3,t4),col=c(1,8,1,8),lty=c(1,1,2,2),lwd=2)
+dev.off()
+```
+
+
+
+
+
+## Variance
+
+$$
+Z(t)=\frac{1}{t}\sum_{s=1}^{t}X(s)
+$$
+
+$$
+\mbox{E}(Z(t))=\lambda
+$$
+
+$$
+\mbox{V}(Z(t))\sim t^{-1} ?
+$$
+
+
+$$
+V(Z(T))=p(1-p)\frac{1}{nT}+p(1-p)\frac{(n-1)}{nT}f(\rho_{A})+\frac{2p(1-p)}{T^2}\sum_{i=1}^{T-1}f(\rho_{A}d_i)(T-i)
+$$
+
+
+```{r}
+f<-function(rho,p){
+  Sigma<-matrix(c(1,rho,rho,1),2,2)
+  q<-qnorm(p)
+  rho_D<-(pmvnorm(upper=c(q,q),mean=c(0,0),sigma=Sigma)[1]-p^2)/(p*(1-p))
+  return(rho_D)  
+}
+dt_P<-function(T,gamma) (1:T)**(-gamma)
+dt_E<-function(T,theta) theta**(0:(T-1))
+
+
+VZ_P<-function(T,p,n,rho_A,gamma){
+  ans<-p*(1-p)*(1/(n*T)+(n-1)*f(rho_A,p)/(n*T))
+  if(T>1){
+  dt<-dt_P(T,gamma)  
+  for(i in 2:T){
+  ans<-ans+(p*(1-p)*2*f(rho_A*dt[i],p)*(T-i+1))/(T**2)
+  }    
+  }  
+  return(ans)
+}
+
+VZ_E<-function(T,p,n,rho_A,theta){
+  ans<-p*(1-p)*(1/(n*T)+(n-1)*f(rho_A,p)/(n*T))
+  if(T>1){
+  dt<-dt_E(T,theta)  
+  for(i in 2:T){
+  ans<-ans+(p*(1-p)*2*f(rho_A*dt[i],p)*(T-i+1))/(T**2)
+  }    
+  }  
+  return(ans)
+}
+```
+
+
+
+
+
+-　DATA
+
+```{r eval=FALSE}
+Ts<-c(seq(1,9),seq(10,90,by=10),seq(100,900,by=100),seq(1000,9000,by=1000),10000,20000,100000)
+n<-10000
+rho_A<-0.5
+
+V_t_05_08<-c()
+V_t_05_09<-c()
+V_t_05_099<-c()
+V_t_05_0999<-c()
+V_t_01_08<-c()
+V_t_01_09<-c()
+V_t_01_099<-c()
+V_t_01_0999<-c()
+V_t_001_08<-c()
+V_t_001_09<-c()
+V_t_001_099<-c()
+V_t_001_0999<-c()
+
+p<-0.5
+theta<-0.8
+I<-length(Ts)
+for(i in 1:I){
+V_t_05_08[i]<-VZ_E(Ts[i],0.5,n,rho_A,0.8)
+V_t_05_09[i]<-VZ_E(Ts[i],0.5,n,rho_A,0.9)
+V_t_05_099[i]<-VZ_E(Ts[i],0.5,n,rho_A,0.99)
+V_t_05_0999[i]<-VZ_E(Ts[i],0.5,n,rho_A,0.999)
+V_t_01_08[i]<-VZ_E(Ts[i],0.1,n,rho_A,0.8)
+V_t_01_09[i]<-VZ_E(Ts[i],0.1,n,rho_A,0.9)
+V_t_01_099[i]<-VZ_E(Ts[i],0.1,n,rho_A,0.99)
+V_t_01_0999[i]<-VZ_E(Ts[i],0.1,n,rho_A,0.999)
+V_t_001_08[i]<-VZ_E(Ts[i],0.01,n,rho_A,0.8)
+V_t_001_09[i]<-VZ_E(Ts[i],0.01,n,rho_A,0.9)
+V_t_001_099[i]<-VZ_E(Ts[i],0.01,n,rho_A,0.99)
+V_t_001_0999[i]<-VZ_E(Ts[i],0.01,n,rho_A,0.999)
+} 
+
+save(Ts,V_t_05_08,V_t_05_09,V_t_05_099,V_t_05_0999,V_t_01_08,V_t_01_09,V_t_01_099,V_t_01_0999,V_t_001_08,V_t_001_09,V_t_001_099,V_t_001_0999,file="EXP_V_t.RData")
+
+```
+
+
+```{r eval=FALSE}
+Ts<-c(seq(1,9),seq(10,90,by=10),seq(100,900,by=100),seq(1000,9000,by=1000),10000,20000,100000)
+n<-10000
+rho_A<-0.5
+
+
+V_t_05_20<-c()
+V_t_05_15<-c()
+V_t_05_10<-c()
+V_t_05_05<-c()
+V_t_05_01<-c()
+
+
+V_t_01_20<-c()
+V_t_01_15<-c()
+V_t_01_10<-c()
+V_t_01_05<-c()
+V_t_01_01<-c()
+
+V_t_001_20<-c()
+V_t_001_15<-c()
+V_t_001_10<-c()
+V_t_001_05<-c()
+V_t_001_01<-c()
+
+I<-length(Ts)
+for(i in 1:I){
+V_t_05_20[i]<-VZ_P(Ts[i],0.5,n,rho_A,2.0)
+V_t_05_15[i]<-VZ_P(Ts[i],0.5,n,rho_A,1.5)
+V_t_05_10[i]<-VZ_P(Ts[i],0.5,n,rho_A,1.0)
+V_t_05_05[i]<-VZ_P(Ts[i],0.5,n,rho_A,0.5)
+V_t_05_01[i]<-VZ_P(Ts[i],0.5,n,rho_A,0.1)
+
+V_t_01_20[i]<-VZ_P(Ts[i],0.1,n,rho_A,2.0)
+V_t_01_15[i]<-VZ_P(Ts[i],0.1,n,rho_A,1.5)
+V_t_01_10[i]<-VZ_P(Ts[i],0.1,n,rho_A,1.0)
+V_t_01_05[i]<-VZ_P(Ts[i],0.1,n,rho_A,0.5)
+V_t_01_01[i]<-VZ_P(Ts[i],0.1,n,rho_A,0.1)
+
+V_t_001_20[i]<-VZ_P(Ts[i],0.01,n,rho_A,2.0)
+V_t_001_15[i]<-VZ_P(Ts[i],0.01,n,rho_A,1.5)
+V_t_001_10[i]<-VZ_P(Ts[i],0.01,n,rho_A,1.0)
+V_t_001_05[i]<-VZ_P(Ts[i],0.01,n,rho_A,0.5)
+V_t_001_01[i]<-VZ_P(Ts[i],0.01,n,rho_A,0.1)
+} 
+
+
+save(V_t_05_20,V_t_05_15,V_t_05_10,V_t_05_05,V_t_05_01,V_t_01_20,V_t_01_15,V_t_01_10,V_t_01_05,V_t_01_01,V_t_001_20,V_t_001_15,V_t_001_10,V_t_001_05,V_t_001_01,file="POW_V_t.RData")
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r echo=FALSE}
+load("EXP_V_t.RData")
+```
+
+- $\lambda=0.5$
+
+
+```{r echo=FALSE}
+t1<-expression(paste(theta,"=0.999"));t2<-expression(paste(theta,"=0.99"));t3<-expression(paste(theta,"=0.9"));t4<-expression(paste(theta,"=0.8"))
+t_ylab<-expression(paste("V(Z(t))"))
+t_main<-expression(paste(lambda,"=0.5"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_05_0999,log="xy",type="l",col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2,ylim=c(0.0001,0.3))
+points(Ts,V_t_05_099,type="l",col=8,lty=1,lwd=2)
+points(Ts,V_t_05_09,type="l",col=1,lty=2,lwd=2)
+points(Ts,V_t_05_08,type="l",col=8,lty=2,lwd=2)
+curve(0.5/x,col=1,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,"1/t"),col=c(1,8,1,8,1),lty=c(1,1,2,2,3),lwd=2)
+
+pdf("VZ_pd_0.5_rho_0.5_EXP.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_05_0999,log="xy",type="l",col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2,ylim=c(0.0001,0.3))
+points(Ts,V_t_05_099,type="l",col=8,lty=1,lwd=2)
+points(Ts,V_t_05_09,type="l",col=1,lty=2,lwd=2)
+points(Ts,V_t_05_08,type="l",col=8,lty=2,lwd=2)
+curve(0.5/x,col=1,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,"0.5/t"),col=c(1,8,1,8),lty=c(1,1,2,2,3),lwd=2,cex=1.5)
+dev.off()
+```
+
+- $\lambda=0.1$
+
+```{r echo=FALSE}
+t1<-expression(paste(theta,"=0.999"));t2<-expression(paste(theta,"=0.99"));t3<-expression(paste(theta,"=0.9"));t4<-expression(paste(theta,"=0.8"))
+t_ylab<-expression(paste("V(Z(t))"))
+t_main<-expression(paste(lambda,"=0.1"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_01_0999,log="xy",type="l",col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2,ylim=c(0.0001,0.1))
+points(Ts,V_t_01_099,type="l",col=8,lty=1,lwd=2)
+points(Ts,V_t_01_09,type="l",col=1,lty=2,lwd=2)
+points(Ts,V_t_01_08,type="l",col=8,lty=2,lwd=2)
+curve(0.1/x,col=1,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,"0.1/t"),col=c(1,8,1,8,1),lty=c(1,1,2,2,3),lwd=2)
+
+pdf("VZ_pd_0.1_rho_0.5_EXP.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_01_0999,log="xy",type="l",ylim=c(0.0001,0.1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(Ts,V_t_01_099,type="l",col=8,lty=1,lwd=2)
+points(Ts,V_t_01_09,type="l",col=1,lty=2,lwd=2)
+points(Ts,V_t_01_08,type="l",col=8,lty=2,lwd=2)
+curve(0.1/x,col=1,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,"0.1/t"),col=c(1,8,1,8,1),lty=c(1,1,2,2,3),lwd=2,cex=1.5)
+dev.off()
+```
+
+
+- $\lambda=0.01$
+
+```{r echo=FALSE}
+t1<-expression(paste(theta,"=0.999"));t2<-expression(paste(theta,"=0.99"));t3<-expression(paste(theta,"=0.9"));t4<-expression(paste(theta,"=0.8"))
+t_ylab<-expression(paste("V(Z(t))"))
+t_main<-expression(paste(lambda,"=0.01"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_001_0999,log="xy",type="l",col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2,ylim=c(0.00001,0.01))
+points(Ts,V_t_001_099,type="l",col=8,lty=1,lwd=2)
+points(Ts,V_t_001_09,type="l",col=1,lty=2,lwd=2)
+points(Ts,V_t_001_08,type="l",col=8,lty=2,lwd=2)
+curve(0.01/x,col=1,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,"0.01/t"),col=c(1,8,1,8,1),lty=c(1,1,2,2,3),lwd=2)
+
+pdf("VZ_pd_0.01_rho_0.5_EXP.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_001_0999,log="xy",type="l",ylim=c(0.00001,0.01),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(Ts,V_t_001_099,type="l",col=8,lty=1,lwd=2)
+points(Ts,V_t_001_09,type="l",col=1,lty=2,lwd=2)
+points(Ts,V_t_001_08,type="l",col=8,lty=2,lwd=2)
+curve(0.1/x,col=1,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,"0.01/t"),col=c(1,8,1,8,1),lty=c(1,1,2,2,3),lwd=2,cex=1.5)
+dev.off()
+```
+
+
+
+
+```{r echo=FALSE}
+load("POW_V_t.RData")
+```
+
+
+
+- $\lambda=0.5$
+
+```{r echo=FALSE}
+t1<-expression(paste(gamma,"=0.1"));t2<-expression(paste(gamma,"=0.5"));t3<-expression(paste(gamma,"=1.0"))
+t4<-expression(paste(gamma,"=1.5"));t5<-expression(paste(gamma,"=2.0"))
+t_ylab<-expression(paste("V(Z(t))"))
+t_main<-expression(paste(lambda,"=0.5"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_05_01,log="xy",ylim=c(0.00001,0.3),type="l",col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(Ts,V_t_05_05,type="l",col="gray",lwd=2)
+points(Ts,V_t_05_10,type="l",col=1,lwd=2,lty=2)
+points(Ts,V_t_05_15,type="l",col="gray",lwd=2,lty=2)
+points(Ts,V_t_05_20,type="l",col=1,lwd=2,lty=3)
+curve(0.1/x,col=8,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5,"0.1/t"),col=c("black","gray","black","gray","black","gray"),lty=c(1,1,2,2,3,3),lwd=2,cex=1.2)
+
+pdf("VZ_pd_0.5_rho_0.5_POW.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_05_01,log="xy",ylim=c(0.00001,0.3),type="l",col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(Ts,V_t_05_05,type="l",col="gray",lwd=2)
+points(Ts,V_t_05_10,type="l",col=1,lwd=2,lty=2)
+points(Ts,V_t_05_15,type="l",col="gray",lwd=2,lty=2)
+points(Ts,V_t_05_20,type="l",col=1,lwd=2,lty=3)
+curve(0.1/x,col=8,lty=3,lwd=3,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5,"0.1/t"),col=c("black","gray","black","gray","black","gray"),lty=c(1,1,2,2,3,3),cex=1.5,lwd=c(2,2,2,2,2,3))
+dev.off()
+```
+
+
+- $\lambda=0.1$
+
+```{r echo=FALSE}
+t1<-expression(paste(gamma,"=0.1"));t2<-expression(paste(gamma,"=0.5"));t3<-expression(paste(gamma,"=1.0"))
+t4<-expression(paste(gamma,"=1.5"));t5<-expression(paste(gamma,"=2.0"))
+t_ylab<-expression(paste("V(Z(t))"))
+t_main<-expression(paste(lambda,"=0.1"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_01_01,log="xy",type="l",ylim=c(0.000005,0.1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(Ts,V_t_01_05,type="l",col="gray",lwd=2)
+points(Ts,V_t_01_10,type="l",col=1,lwd=2,lty=2)
+points(Ts,V_t_01_15,type="l",col="gray",lwd=2,lty=2)
+points(Ts,V_t_01_20,type="l",col=1,lwd=2,lty=3)
+curve(0.05/x,col=8,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5,"0.05/t"),col=c("black","gray","black","gray","black","gray"),lty=c(1,1,2,2,3,3),lwd=2,cex=1.2)
+
+pdf("VZ_pd_0.1_rho_0.5_POW.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_01_01,log="xy",type="l",ylim=c(0.000005,0.1),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(Ts,V_t_01_05,type="l",col="gray",lwd=2)
+points(Ts,V_t_01_10,type="l",col=1,lwd=2,lty=2)
+points(Ts,V_t_01_15,type="l",col="gray",lwd=2,lty=2)
+points(Ts,V_t_01_20,type="l",col=1,lwd=2,lty=3)
+curve(0.05/x,col=8,lty=3,lwd=3,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5,"0.05/t"),col=c("black","gray","black","gray","black","gray"),lty=c(1,1,2,2,3,3),cex=1.5,lwd=c(2,2,2,2,2,3))
+dev.off()
+```
+
+- $\lambda=0.01$
+
+
+```{r echo=FALSE}
+t1<-expression(paste(gamma,"=0.1"));t2<-expression(paste(gamma,"=0.5"));t3<-expression(paste(gamma,"=1.0"))
+t4<-expression(paste(gamma,"=1.5"));t5<-expression(paste(gamma,"=2.0"))
+t_ylab<-expression(paste("V(Z(t))"))
+t_main<-expression(paste(lambda,"=0.01"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_001_01,log="xy",type="l",ylim=c(0.0000005,0.01),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(Ts,V_t_001_05,type="l",col="gray",lwd=2)
+points(Ts,V_t_001_10,type="l",col=1,lwd=2,lty=2)
+points(Ts,V_t_001_15,type="l",col="gray",lwd=2,lty=2)
+points(Ts,V_t_001_20,type="l",col=1,lwd=2,lty=3)
+curve(0.005/x,col=8,lty=3,lwd=2,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5,"0.005/t"),col=c("black","gray","black","gray","black","gray"),lty=c(1,1,2,2,3,3),lwd=2,cex=1.2)
+
+pdf("VZ_pd_0.01_rho_0.5_POW.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(Ts,V_t_001_01,log="xy",type="l",ylim=c(0.0000005,0.01),col=1,lwd=2,ylab=t_ylab,xlab="t",cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(Ts,V_t_001_05,type="l",col="gray",lwd=2)
+points(Ts,V_t_001_10,type="l",col=1,lwd=2,lty=2)
+points(Ts,V_t_001_15,type="l",col="gray",lwd=2,lty=2)
+points(Ts,V_t_001_20,type="l",col=1,lwd=2,lty=3)
+curve(0.005/x,col=8,lty=3,lwd=3,add=TRUE)
+legend("bottomleft",legend=c(t1,t2,t3,t4,t5,"0.005/t"),col=c("black","gray","black","gray","black","gray"),lty=c(1,1,2,2,3,3),cex=1.5,lwd=c(2,2,2,2,2,3))
+dev.off()
+```
+
+
+- Normal 
+
+$$
+V(Z(T))\sim T^{-1}
+$$
+
+- Super-Normal
+
+
+$$
+V(Z(T))\sim T^{-\delta}
+$$
+
+
+
+
+
+
+$$
+-\log_{2}(V(Z(2T))/V(Z(t)))=\delta
+$$
+
+
+
+
+
+
+```{r eval=FALSE}
+gamma2delta<-function(T,p,n,rho_A,gamma){
+  VZ<-VZ_P(T,p,n,rho_A,gamma)
+  VZ2<-VZ_P(2*T,p,n,rho_A,gamma)
+  ans<-log2(VZ/VZ2)
+  return(ans)
+}
+
+
+ds_05<-c()
+ds_01<-
+ds_001<-c()
+gs<-c(0.01,seq(0.1,3.0,by=0.1))
+for(i in 1:length(gs)){
+  ds_05[i]<-gamma2delta(1e5,0.5,n,rho_A,gs[i])
+  ds_01[i]<-gamma2delta(1e5,0.1,n,rho_A,gs[i])
+  ds_001[i]<-gamma2delta(1e5,0.01,n,rho_A,gs[i])
+}
+```
+
+
+```{r}
+load("gamma_vs_delta.RData")
+ytitle<-expression(paste("log"[2],"(V(Z(T))/V(Z(2T)))"))
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(gs,ds_05,type="l",xlab=expression(gamma),ylab=ytitle,cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(gs,ds_01,type="l",lty=2)
+points(gs,ds_05,type="l",lty=3)
+legend("bottomright",legend=c("p=0.5","p=0.1","p=0.01"),col=1,lty=c(1,2,3),cex=1.5,lwd=2)
+
+pdf("gamma_vs_delta.pdf")
+par(mar = c(5.5, 6.0, 4.1, 2))
+plot(gs,ds_05,type="l",xlab=expression(gamma),ylab=expression(delta),cex=0.2,cex.lab=2,cex.main=2,cex.axis=2)
+points(gs,ds_01,type="l",lty=2)
+points(gs,ds_05,type="l",lty=3)
+legend("bottomright",legend=c("p=0.5","p=0.1","p=0.01"),col=1,lty=c(1,2,3),cex=1.5,lwd=2)
+dev.off()
+```
+
+
+
+
