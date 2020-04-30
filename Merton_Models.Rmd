@@ -1,0 +1,789 @@
+---
+title: 'Parameter Esimation and WAIC,WBIC of Merton models'
+author: "S.Mori"
+date: "2020年2月10日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(rstan)
+library(mvtnorm)
+library(misc3d)
+library(loo)
+source("function.R")
+options(width=120)
+rstan_options(auto_write=TRUE)
+options(mc.cores=parallel::detectCores())
+```
+
+## Data
+
+```{r echo=FALSE}
+M<-read.csv("M.csv")
+S<-read.csv("SP.csv")
+data<-list()
+d<-list()
+Ts<-c()
+data[[1]]<-M[1:99,6:7]
+data[[2]]<-M[62:99,6:7]
+data[[3]]<-S[1:38,6:7]
+data[[4]]<-M[71:99,6:7]
+data[[5]]<-S[10:38,6:7]
+
+data[[6]]<-M[1:99,2:3]
+data[[7]]<-M[62:99,2:3]
+data[[8]]<-S[1:38,2:3]
+data[[9]]<-M[71:99,2:3]
+data[[10]]<-S[10:38,2:3]
+
+data[[11]]<-M[1:99,4:5]
+data[[12]]<-M[62:99,4:5]
+data[[13]]<-S[1:38,4:5]
+data[[14]]<-M[71:99,4:5]
+data[[15]]<-S[10:38,4:5]
+
+I<-15
+for(i in 1:I){
+  Ts[i]<-nrow(data[[i]])
+   d[[i]]<-list(T=Ts[i],n_t=data[[i]][,1],k_t=data[[i]][,2])
+}
+titles<-c("Moody's,ALL,1920-2018","Moody's,ALL,1981-2018","S&P,ALL,1981-2017","Moody's,ALL,1990-2018","S&P,ALL,1990-2017",
+          "Moody's,SG,1920-2018","Moody's,SG,1981-2018","S&P,SG,1981-2017","Moody's,SG,1990-2018","S&P,SG,1990-2017",
+          "Moody's,IG,1920-2018","Moody's,IG,1981-2018","S&P,IG,1981-2017","Moody's,IG,1990-2018","S&P,IG,1990-2017")
+```
+
+
+
+
+
+
+- Moody's and S&P Data
+
+- Default rate
+
+$$
+\frac{k_t}{n_t}
+$$
+
+
+
+```{r echo=FALSE}
+plot(1920:2018,data[[1]][,2]/data[[1]][,1],type="l",lwd=2,main="Moody's and S&P Default rate Time Series Data",xlab="year",ylab="Defaults/Obligors",ylim=c(0,0.2))
+points(1920:2018,data[[6]][,2]/data[[6]][,1],type="l",lty=2,lwd=2)
+points(1920:2018,data[[11]][,2]/data[[11]][,1],type="l",lty=3,lwd=2)
+points(1981:2018,data[[3]][,2]/data[[3]][,1],type="l",lty=1,lwd=2,col=2)
+points(1981:2018,data[[8]][,2]/data[[8]][,1],type="l",lty=2,lwd=2,col=2)
+points(1981:2018,data[[13]][,2]/data[[13]][,1],type="l",lty=3,lwd=2,col=2)
+legend("topright",horiz=FALSE,legend=c(titles[1],titles[6],titles[11],titles[3],titles[8],titles[13]),col=c(1,1,1,2,2,2),lty=c(1,2,3,1,2,3),cex=0.8)
+```
+
+
+
+- 平均デフォルト率
+
+$$
+\lambda_{avg}=\sum_{t=1}^{T}k_t/\sum_{t}n_t
+$$
+
+
+```{r echo=FALSE}
+lambda_avg<-c()
+I<-15
+for(i in 1:I){
+lambda_avg[i]<-round(sum(data[[i]][,2])/sum(data[[i]][,1]),3)
+}  
+```
+
+
+
+
+
+
+## デフォルト相関のモデル化:Merton Model
+
+- $\lambda$：デフォルト確率
+
+- $\rho$:アセット相関
+
+$$
+S\sim \mbox{N}(0,1^2)
+$$
+
+
+- $\rho$:アセット相関:$\theta(x):$Step function
+
+
+$$
+D_i(t)=\theta(\Phi^{-1}(\lambda)-(\sqrt{\rho}S+\sqrt{1-\rho}\xi_i)),\xi_i,S\sim \mbox{N}(0,1^2),i=1,\cdots,N
+$$
+
+
+- 条件つきデフォルト確率$p(S)$
+
+$$
+p(S)=P(D_i=1|S)=\Phi\left(\frac{\Phi^{-1}(\lambda)-\sqrt{\rho}S}{\sqrt{1-\rho}}\right)
+$$
+
+
+- 同時デフォルト確率
+
+$$
+P[\mbox{Borrower i and j default}]=P(D_i=1 \cap D_j=1)=\Phi_2(\Phi^{-1}(\lambda),\Phi^{-1}(\lambda),\rho)
+>\lambda^2=P[D_t]P[D_s] \,\,\, (14)
+$$
+
+- デフォルト相関$\rho_{D}$
+
+$$
+\rho_{D}\equiv \frac{P(D_i=1 \cap D_j=1)-\lambda^2}{\lambda(1-\lambda)}
+$$
+
+
+
+- アセット相関VSデフォルト相関
+
+
+```{r echo=FALSE}
+f01<-function(rho) rho2rho_D(rho,0.5)
+f001<-function(rho) rho2rho_D(rho,0.01)
+f01v<-Vectorize(f01)
+f001v<-Vectorize(f001)
+curve(f01v,xlim=c(0,0.9999),xlab=expression(rho),ylab=expression(rho[D]),n=200,lwd=2)
+curve(f001v,add=TRUE,col=2,n=200,lwd=2)
+legend("topleft",legend=c("lambda=0.5","lambda=0.01"),col=1:2,lwd=2)
+```
+
+
+
+
+- 時間相関
+
+$$
+S[1:T]\sim N_{T}(\vec{0},\Sigma)
+$$
+
+$$
+\Sigma_{ij}=\mbox{Cor}(S_i,S_j)
+$$
+
+
+
+- $\theta$:時間相関のパラメータ
+
+$$
+\mbox{Cor}(S_t,S_{t'})=\theta^{|t-t'|}
+$$
+
+
+$$
+\mbox{Cor}(S_t,S_{t'})=(1+|t-t'|)^{-\theta}
+$$
+
+- RW モデル
+
+$$
+S_1\sim \mbox{N}(0,1^2),S_t=\theta S_{t-1}+\sqrt{1-\theta^2} \epsilon_t,t\ge 2,\epsilon_t\sim \mbox{N}(0,1^2)
+$$
+
+
+$$
+\Sigma_{t,t'}=\mbox{Cor}(S_t,S_{t'})={\theta}^{|t-t'|}
+$$
+
+- Merton Model:$\theta=0$
+
+
+
+
+## Merton Model
+
+- CPMF
+
+$$
+P(k,N|S)=\left(\begin{array}{c} N \\ k \end{array}\right)p(S)^{k}(1-p(S))^{N-k}
+$$
+
+- PMF
+
+$$
+P(k,N)=\int p(k,N|S)f_{N(0,1^2)}(S)dS
+$$
+
+- Log Likelihood
+
+$$
+\log L(\lambda,\rho)=\sum_{t=1}^{T}\ln P(k_{t},N_t)
+$$
+
+
+- Most-Likelihood Estimation
+
+```{r eval=FALSE}
+lambda_Merton<-c()
+rho_Merton<-c()
+SE_lambda_Merton<-c()
+SE_rho_Merton<-c()
+logL_Merton<-c()
+AIC_Merton<-c()
+
+I<-15
+for(i in 1:I){
+k<-data[[i]][,2]
+N<-data[[i]][,1]
+
+f<-function(x){
+if(x[2]>=0 & x[2]<1 & x[1]>0 & x[1]<1){
+ans<-0
+for(t in 1:length(k)){
+ ans<-ans+log(P_k(k[t],N[t],x[1],x[2]))
+}
+}
+else{
+ans<-(-10000)
+}  
+return(ans)
+}
+
+res<-optim(c(0.01,0.01),hessian=TRUE,f,control=list(fnscale=-1))
+out<-round(c(res$value,res$par,sqrt(-eigen(solve(res$hessian))$values)),4)　　# 対数尤度,最尤推定値と標準誤差
+lambda_Merton[i]<-out[2]
+SE_lambda_Merton[i]<-out[4]
+rho_Merton[i]<-out[3]
+SE_rho_Merton[i]<-out[5]
+logL_Merton[i]<-out[1]
+AIC_Merton[i]<-2*(-logL_Merton[i]+2)
+}
+save(lambda_Merton,rho_Merton,logL_Merton,AIC_Merton,SE_lambda_Merton,SE_rho_Merton,file="Merton.RData")
+```
+
+
+
+
+-  Bayesian Estimation
+
+
+```{stan output.var="Merton_WAIC"}
+data{
+  int T;
+  int<lower=0> n_t[T];
+  int<lower=0> k_t[T];
+}
+
+parameters{
+  real<lower=0.000001,upper=0.999> lambda;
+  real<lower=0.0,upper=0.999> rho;
+  vector[T] S_t;
+}
+
+transformed parameters {
+    real lambda_t[T];
+    for (t in 1:T)
+       lambda_t[t] = Phi((inv_Phi(lambda)-sqrt(rho)*S_t[t])/sqrt(1-rho));
+}
+
+model{
+    S_t[1:T]~normal(0,1);
+  for(t in 1:T){
+    target += binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+
+generated quantities {
+  real log_lik[T];
+  for (t in 1:T) {
+    log_lik[t] = binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+```
+
+```{stan output.var="Merton_WBIC"}
+data{
+  int T;
+  int<lower=0> n_t[T];
+  int<lower=0> k_t[T];
+}
+
+parameters{
+  real<lower=0.000001,upper=0.999> lambda;
+  real<lower=0.0,upper=0.999> rho;
+  vector[T] S_t;
+}
+
+transformed parameters {
+    real lambda_t[T];
+    for (t in 1:T)
+       lambda_t[t] = Phi((inv_Phi(lambda)-sqrt(rho)*S_t[t])/sqrt(1-rho));
+}
+
+model{
+    S_t[1:T]~normal(0,1);
+  for(t in 1:T){
+    target += 1/log(T)*binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+
+generated quantities {
+  real log_lik[T];
+  for (t in 1:T) {
+    log_lik[t] = binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+```
+
+
+```{stan output.var="EXP_WAIC"}
+data{
+  int T;
+  int<lower=0> n_t[T];
+  int<lower=0,upper=300> k_t[T];
+}
+
+parameters{
+  real<lower=0.00001,upper=0.999> lambda;
+  real<lower=0.0,upper=0.999> rho;
+  real<lower=0.0,upper=1.0> theta;
+  vector[T] S_t;
+}
+
+transformed parameters{
+  vector[T] mu;
+  cov_matrix[T] Sigma;
+  real lambda_t[T];
+  for(i in 1:T){
+    mu[i]=0.0; 
+    for(j in 1:T){
+      Sigma[i,j]=theta^(abs(i-j));
+    }
+  }    
+  for (t in 1:T){
+    lambda_t[t] = Phi((inv_Phi(lambda)-sqrt(rho)*S_t[t])/sqrt(1-rho));
+  }
+}
+
+model{
+    S_t~multi_normal(mu,Sigma);
+    for(t in 1:T){
+      target += binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+    }
+}
+
+generated quantities {
+  real log_lik[T];
+  for (t in 1:T) {
+    log_lik[t] = binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+```
+
+
+```{stan output.var="EXP_WBIC"}
+data{
+  int T;
+  int<lower=0> n_t[T];
+  int<lower=0,upper=300> k_t[T];
+}
+
+parameters{
+  real<lower=0.00001,upper=0.999> lambda;
+  real<lower=0.0,upper=0.999> rho;
+  real<lower=0.0,upper=1.0> theta;
+  vector[T] S_t;
+}
+
+transformed parameters{
+  vector[T] mu;
+  cov_matrix[T] Sigma;
+  real lambda_t[T];
+  for(i in 1:T){
+    mu[i]=0.0; 
+    for(j in 1:T){
+      Sigma[i,j]=theta^(abs(i-j));
+    }
+  }    
+  for (t in 1:T){
+    lambda_t[t] = Phi((inv_Phi(lambda)-sqrt(rho)*S_t[t])/sqrt(1-rho));
+  }
+}
+
+model{
+    S_t~multi_normal(mu,Sigma);
+    for(t in 1:T){
+      target += 1/log(T)*binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+    }
+}
+
+generated quantities {
+  real log_lik[T];
+  for (t in 1:T) {
+    log_lik[t] = binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+```
+
+
+
+```{stan output.var="RW_WAIC"}
+data{
+  int T;
+  int<lower=0> n_t[T];
+  int<lower=0,upper=300> k_t[T];
+}
+
+parameters{
+  real<lower=0.00001,upper=0.999> lambda;
+  real<lower=0.0,upper=0.999> rho;
+  real<lower=0.0,upper=1.0> theta;
+  vector[T] eps_t;
+}
+
+transformed parameters{
+  vector[T] S_t;
+  real lambda_t[T];
+    S_t[1]=eps_t[1];
+  for(t in 2:T){
+    S_t[t]=theta*S_t[t-1]+sqrt(1-theta*theta)*eps_t[t];
+  }
+  for (t in 1:T){
+    lambda_t[t] = Phi((inv_Phi(lambda)-sqrt(rho)*S_t[t])/sqrt(1-rho));
+  }
+}
+
+model{
+    eps_t[1:T]~normal(0,1);
+  for(t in 1:T){
+    target += binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+
+generated quantities {
+  real log_lik[T];
+  for (t in 1:T) {
+    log_lik[t] = binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+```
+
+
+
+
+```{stan output.var="RW_WBIC"}
+data{
+  int T;
+  int<lower=0> n_t[T];
+  int<lower=0,upper=300> k_t[T];
+}
+
+parameters{
+  real<lower=0.00001,upper=0.999> lambda;
+  real<lower=0.0,upper=0.999> rho;
+  real<lower=0.0,upper=1.0> theta;
+  vector[T] eps_t;
+}
+
+transformed parameters{
+  vector[T] S_t;
+  real lambda_t[T];
+    S_t[1]=eps_t[1];
+  for(t in 2:T){
+    S_t[t]=theta*S_t[t-1]+sqrt(1-theta*theta)*eps_t[t];
+  }
+  for (t in 1:T){
+    lambda_t[t] = Phi((inv_Phi(lambda)-sqrt(rho)*S_t[t])/sqrt(1-rho));
+  }
+}
+
+model{
+    eps_t[1:T]~normal(0,1);
+  for(t in 1:T){
+    target += 1/log(T)*binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+
+generated quantities {
+  real log_lik[T];
+  for (t in 1:T) {
+    log_lik[t] = binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+```
+
+
+
+
+```{stan output.var="POW_WAIC"}
+data{
+  int T;
+  int<lower=0> n_t[T];
+  int<lower=0,upper=300> k_t[T];
+}
+
+parameters{
+  real<lower=0.00001,upper=0.999> lambda;
+  real<lower=0.0,upper=0.999> rho;
+  real<lower=0.0,upper=30.0> theta;
+  vector[T] S_t;
+}
+
+transformed parameters{
+  vector[T] mu;
+  cov_matrix[T] Sigma;
+  real lambda_t[T];
+  for(i in 1:T){
+    mu[i]=0.0; 
+    for(j in 1:T){
+      Sigma[i,j]=(1+abs(i-j))^(-theta);
+    }
+  }    
+  for (t in 1:T){
+    lambda_t[t] = Phi((inv_Phi(lambda)-sqrt(rho)*S_t[t])/sqrt(1-rho));
+  }
+}
+
+model{
+    S_t~multi_normal(mu,Sigma);
+  for(t in 1:T){
+    target += binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+
+generated quantities {
+  real log_lik[T];
+  for (t in 1:T) {
+    log_lik[t] = binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+```
+
+
+
+
+
+```{stan output.var="POW_WBIC"}
+data{
+  int T;
+  int<lower=0> n_t[T];
+  int<lower=0,upper=300> k_t[T];
+}
+
+parameters{
+  real<lower=0.00001,upper=0.999> lambda;
+  real<lower=0.0,upper=0.999> rho;
+  real<lower=0.0,upper=30.0> theta;
+  vector[T] S_t;
+}
+
+transformed parameters{
+  vector[T] mu;
+  cov_matrix[T] Sigma;
+  real lambda_t[T];
+  for(i in 1:T){
+    mu[i]=0.0; 
+    for(j in 1:T){
+      Sigma[i,j]=(1+abs(i-j))^(-theta);
+    }
+  }    
+  for (t in 1:T){
+    lambda_t[t] = Phi((inv_Phi(lambda)-sqrt(rho)*S_t[t])/sqrt(1-rho));
+  }
+}
+
+model{
+    S_t~multi_normal(mu,Sigma);
+  for(t in 1:T){
+    target += 1/log(T)*binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+
+generated quantities {
+  real log_lik[T];
+  for (t in 1:T) {
+    log_lik[t] = binomial_lpmf(k_t[t]|n_t[t],lambda_t[t]);
+  }
+}
+```
+
+
+
+
+
+
+
+
+## ベイズサンプリング
+
+
+```{r eval=FALSE,echo=FALSE}
+T=10000
+Tw=1000
+Nc=6
+
+res<-list()
+MAP<-list()
+lambda<-list()
+rho<-list()
+theta<-list()
+
+## Merton
+WAIC_Merton_B<-c()
+WBIC_Merton_B<-c()
+lambda_Merton_B<-c()
+rho_Merton_B<-c()
+
+for(i in 1:I){
+print(sprintf("Merton Bayes Data %d",i))
+fit<-sampling(Merton_WAIC,data=d[[i]],seed=123,iter=T,warmup=Tw,thin=10,chain=Nc,refresh=0,show_messages=FALSE)
+res[[i]]<-round(summary(fit)$summary[c("lambda","rho"),],3)
+ms<-rstan::extract(fit)
+lambda[[i]]<-ms$lambda;rho[[i]]<-ms$rho
+MAP[[i]]<-ms2pars2(ms)
+lambda_Merton_B[i]<-round(MAP[[i]][1],4)
+rho_Merton_B[i]<-round(MAP[[i]][2],3)
+WAIC_Merton_B[[i]]<-waic(extract_log_lik(fit))$estimates[3,1]
+
+fit<-sampling(Merton_WBIC,data=d[[i]],seed=123,iter=T,warmup=Tw,thin=10,chain=Nc,refresh=0,show_messages=FALSE)
+WBIC_Merton_B[[i]]<--mean(rowSums(extract_log_lik(fit)))*2
+rm(ms)
+}
+save(MAP,res,lambda,rho,lambda_Merton_B,rho_Merton_B,WAIC_Merton_B,WBIC_Merton_B,file="Merton_B.RData")
+
+### EXP
+WAIC_EXP<-c()
+WBIC_EXP<-c()
+lambda_EXP<-c()
+rho_EXP<-c()
+theta_EXP<-c()
+
+for(i in 1:I){
+print(sprintf("EXP Data %d",i))
+fit<-sampling(EXP_WAIC,data=d[[i]],seed=123,iter=T,warmup=Tw,thin=10,chain=Nc,refresh=0,show_messages=FALSE)
+res[[i]]<-round(summary(fit)$summary[c("lambda","rho","theta"),],3)
+ms<-rstan::extract(fit)
+lambda[[i]]<-ms$lambda;rho[[i]]<-ms$rho;theta[[i]]<-ms$theta
+MAP[[i]]<-ms2pars(ms)
+lambda_EXP[i]<-round(MAP[[i]][1],4)
+rho_EXP[i]<-round(MAP[[i]][2],3)
+theta_EXP[i]<-round(MAP[[i]][3],3)
+WAIC_EXP[[i]]<-waic(extract_log_lik(fit))$estimates[3,1]
+
+fit<-sampling(EXP_WBIC,data=d[[i]],seed=123,iter=T,warmup=Tw,thin=10,chain=Nc,refresh=0,show_messages=FALSE)
+WBIC_EXP[[i]]<--mean(rowSums(extract_log_lik(fit)))*2
+rm(ms)
+}
+save(MAP,res,lambda,rho,theta,lambda_EXP,rho_EXP,theta_EXP,WAIC_EXP,WBIC_EXP,file="EXP.RData")
+
+### RW
+WAIC_RW<-c()
+WBIC_RW<-c()
+lambda_RW<-c()
+rho_RW<-c()
+theta_RW<-c()
+
+for(i in 1:I){
+print(sprintf("RW Data %d",i))
+fit<-sampling(RW_WAIC,data=d[[i]],seed=123,iter=T,warmup=Tw,thin=10,chain=Nc,refresh=0,show_messages=FALSE)
+res[[i]]<-round(summary(fit)$summary[c("lambda","rho","theta"),],3)
+ms<-rstan::extract(fit)
+lambda[[i]]<-ms$lambda;rho[[i]]<-ms$rho;theta[[i]]<-ms$theta
+MAP[[i]]<-ms2pars(ms)
+lambda_RW[i]<-round(MAP[[i]][1],4)
+rho_RW[i]<-round(MAP[[i]][2],3)
+theta_RW[i]<-round(MAP[[i]][3],3)
+WAIC_RW[[i]]<-waic(extract_log_lik(fit))$estimates[3,1]
+
+fit<-sampling(RW_WBIC,data=d[[i]],seed=123,iter=T,warmup=Tw,thin=10,chain=Nc,refresh=0,show_messages=FALSE)
+WBIC_RW[[i]]<--mean(rowSums(extract_log_lik(fit)))*2
+rm(ms)
+}
+save(MAP,res,lambda,rho,theta,lambda_RW,rho_RW,theta_RW,WAIC_RW,WBIC_RW,file="RW.RData")
+
+### POW
+WAIC_POW<-c()
+WBIC_POW<-c()
+lambda_POW<-c()
+rho_POW<-c()
+theta_POW<-c()
+
+for(i in 1:I){
+print(sprintf("POW Data %d",i))
+fit<-sampling(POW_WAIC,data=d[[i]],seed=123,iter=T,warmup=Tw,thin=10,chain=Nc,refresh=0,show_messages=FALSE)
+res[[i]]<-round(summary(fit)$summary[c("lambda","rho","theta"),],3)
+ms<-rstan::extract(fit)
+lambda[[i]]<-ms$lambda;rho[[i]]<-ms$rho;theta[[i]]<-ms$theta
+MAP[[i]]<-ms2pars(ms)
+lambda_POW[i]<-round(MAP[[i]][1],4)
+rho_POW[i]<-round(MAP[[i]][2],3)
+theta_POW[i]<-round(MAP[[i]][3],3)
+WAIC_POW[[i]]<-waic(extract_log_lik(fit))$estimates[3,1]
+
+fit<-sampling(POW_WBIC,data=d[[i]],seed=123,iter=T,warmup=Tw,thin=10,chain=Nc,refresh=0,show_messages=FALSE)
+WBIC_POW[[i]]<--mean(rowSums(extract_log_lik(fit)))*2
+rm(ms)
+}
+save(MAP,res,lambda,rho,theta,lambda_POW,rho_POW,theta_POW,WAIC_POW,WBIC_POW,file="POW.RData")
+```
+
+```{r echo=FALSE}
+load("Merton_B.RData")
+load("EXP.RData")
+load("RW.RData")
+load("POW.RData")
+```
+
+
+
+- WAIC
+
+```{r echo=FALSE}
+WAIC<-data.frame(WAIC_Merton_B,WAIC_EXP,WAIC_RW,WAIC_POW)
+rownames(WAIC)<-titles
+WAIC
+```
+  
+- WBIC  
+
+```{r echo=FALSE}
+WBIC<-data.frame(WBIC_Merton_B,WBIC_EXP,WBIC_RW,WBIC_POW)
+rownames(WBIC)<-titles
+WBIC
+```
+
+- $\lambda$
+
+
+```{r echo=FALSE}
+lambdas<-data.frame(AVG=lambda_avg,Merton=lambda_Merton_B,EXP=lambda_EXP,RW=lambda_RW,POW=lambda_POW)
+rownames(lambdas)<-titles
+lambdas
+```
+
+- $\rho$
+
+
+```{r echo=FALSE}
+rhos<-data.frame(Merton=rho_Merton_B,EXP=rho_EXP,RW=rho_RW,POW=rho_POW)
+rownames(rhos)<-titles
+rhos
+```
+
+
+
+- $\theta$
+
+
+
+
+```{r echo=FALSE}
+thetas<-data.frame(Merton=rep(0,I),EXP=theta_EXP,RW=theta_RW,POW=theta_POW)
+rownames(thetas)<-titles
+thetas
+```
+
+
+
+
+
+
+
+
